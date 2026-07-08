@@ -1,0 +1,3 @@
+# This file keeps the alembic/versions/ directory in git.
+# Git does not track empty directories.
+# Alembic will generate migration files here.

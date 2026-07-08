@@ -1,0 +1,54 @@
+# requirements.in — Direct (top-level) dependencies only.
+#
+# WHY requirements.in exists:
+#   requirements.txt pins EVERY package including transitive dependencies.
+#   This file lists only what YOU directly depend on — cleaner, human-readable.
+#
+# HOW to generate requirements.txt from this file:
+#   pip install pip-tools
+#   pip-compile requirements.in --output-file=requirements.txt
+#
+# HOW to update all packages to latest compatible versions:
+#   pip-compile --upgrade requirements.in
+
+# --- Web Framework ---
+fastapi
+uvicorn[standard]
+python-multipart
+
+# --- Database ---
+sqlalchemy
+alembic
+psycopg2-binary
+
+# --- Authentication ---
+python-jose[cryptography]
+passlib[bcrypt]
+
+# --- Configuration ---
+pydantic-settings
+python-dotenv
+
+# --- Redis ---
+redis
+
+# --- HTTP Client ---
+httpx
+
+# --- Utilities ---
+python-slugify
+
+# --- AI / ML Stack ---
+sentence-transformers
+torch
+qdrant-client
+openai
+tiktoken
+
+# --- Document Parsing ---
+pymupdf
+python-docx
+
+# --- Testing ---
+pytest
+pytest-asyncio

@@ -1,0 +1,104 @@
+/* =============================================================================
+   Global Styles — index.css
+   Imported once in main.jsx. Applies to the entire application.
+
+   Structure:
+   1. Tailwind directives (must be first)
+   2. CSS custom properties (design tokens)
+   3. Base element resets
+   4. Global utility classes
+============================================================================= */
+
+/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================================================
+   CSS Custom Properties (Design Tokens)
+   Defined here so they can be used in both Tailwind and plain CSS.
+============================================================================= */
+@layer base {
+  :root {
+    --color-primary: #4f6ef7;
+    --color-primary-dark: #3b5bdb;
+    --color-surface: #0f172a;
+    --color-surface-card: #1e293b;
+    --color-text: #f1f5f9;
+    --color-text-muted: #94a3b8;
+    --color-border: #334155;
+  }
+
+  /* Dark mode by default (enterprise AI tools are dark) */
+  html {
+    @apply bg-slate-900 text-slate-100;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+
+  /* Focus ring for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-slate-900;
+  }
+}
+
+/* =============================================================================
+   Component Classes (reusable Tailwind component patterns)
+============================================================================= */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2 rounded-lg font-medium text-sm
+           bg-primary-600 text-white
+           hover:bg-primary-700 active:bg-primary-900
+           transition-all duration-150 ease-in-out
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2 rounded-lg font-medium text-sm
+           bg-slate-700 text-slate-200
+           hover:bg-slate-600 active:bg-slate-800
+           border border-slate-600
+           transition-all duration-150 ease-in-out
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 rounded-lg text-sm
+           bg-slate-800 text-slate-100
+           border border-slate-600
+           placeholder:text-slate-500
+           focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
+           transition-colors duration-150;
+  }
+
+  .card {
+    @apply bg-slate-800 border border-slate-700 rounded-xl p-4
+           shadow-lg shadow-black/20;
+  }
+}

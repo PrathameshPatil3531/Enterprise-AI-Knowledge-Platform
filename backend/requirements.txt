@@ -1,0 +1,63 @@
+# ==============================================================================
+# Enterprise AI Knowledge Platform - Backend Dependencies
+# ==============================================================================
+
+# --- Web Framework ---
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.12          # Required for file uploads
+
+# --- Database ---
+sqlalchemy==2.0.36                # ORM
+alembic==1.14.0                   # Schema migrations
+psycopg2-binary==2.9.10           # PostgreSQL adapter
+
+# --- Authentication ---
+python-jose[cryptography]==3.3.0  # JWT encoding/decoding
+passlib[bcrypt]==1.7.4            # Password hashing
+
+# --- Configuration ---
+pydantic-settings==2.6.1          # Environment-based config via Pydantic
+python-dotenv==1.0.1              # Load .env files
+
+# --- Redis ---
+redis==5.2.0                      # Cache, sessions, rate limiting
+
+# --- HTTP Client ---
+httpx==0.28.1                     # Async HTTP client for external APIs
+
+# --- Utilities ---
+python-slugify==8.0.4             # Generate URL-safe slugs
+
+# ==============================================================================
+# AI / ML Stack  (⚠️ sentence-transformers pulls ~2-3 GB PyTorch)
+# ==============================================================================
+
+# --- Embeddings ---
+sentence-transformers==3.3.1      # Local embedding model (all-MiniLM-L6-v2)
+torch==2.5.1                      # PyTorch backend for sentence-transformers
+
+# --- Vector Store ---
+qdrant-client==1.12.1             # Qdrant vector DB Python client
+
+# --- LLM ---
+openai==1.57.0                    # OpenAI GPT API client
+tiktoken==0.8.0                   # Token counter for OpenAI models
+
+# ==============================================================================
+# Document Parsing Stack
+# ==============================================================================
+
+# --- PDF ---
+pymupdf==1.25.1                   # PDF text extraction (fitz) - faster & more reliable than PyPDF2
+
+# --- DOCX ---
+python-docx==1.1.2                # Microsoft Word document parsing
+
+# ==============================================================================
+# Testing
+# ==============================================================================
+
+pytest==8.3.4
+pytest-asyncio==0.24.0
+

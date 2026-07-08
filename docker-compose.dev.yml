@@ -1,0 +1,47 @@
+# ==============================================================================
+# Docker Compose — Development Overrides
+#
+# This file EXTENDS docker-compose.yml with development-specific settings.
+# It does NOT replace it — Docker Compose merges both files.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Or add an alias in your shell:
+#   alias dcdev="docker compose -f docker-compose.yml -f docker-compose.dev.yml"
+#   dcdev up -d
+#
+# Development differences from production:
+#   - Backend uses --reload (auto-restart on code changes)
+#   - Source code mounted as volume (live editing without rebuild)
+#   - DEBUG=true for verbose logging and Swagger UI
+# ==============================================================================
+
+name: enterprise-ai-knowledge-platform
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      # In dev, we build to the 'dependencies' stage, not the final 'app' stage.
+      # This means the image has all packages but no copied source code.
+      # Source code is mounted as a volume instead (enables hot reload).
+      target: dependencies
+    environment:
+      DEBUG: "true"
+      ENVIRONMENT: development
+    volumes:
+      # Mount source code directly into container
+      # File changes on host are immediately visible inside the container
+      # This is why --reload works — Uvicorn detects file changes and restarts
+      - ./backend:/app
+      # Preserve the container's uploads directory (don't overwrite with host dir)
+      - uploads_data:/app/uploads
+      # Preserve the container's venv (don't overwrite with host's venv)
+      - /app/venv
+    # Override the production CMD with dev command (hot reload)
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+
+volumes:
+  uploads_data:

@@ -1,0 +1,183 @@
+# ==============================================================================
+# Docker Compose — Development Configuration
+#
+# WHY Docker Compose?
+# Defines and runs multi-container applications with a single command.
+# All services (FastAPI, PostgreSQL, Redis, Qdrant) start together.
+# No manual "start this first, then that" — Compose handles ordering.
+#
+# Commands:
+#   docker compose up -d          → start all services in background
+#   docker compose up -d backend  → start only backend + its dependencies
+#   docker compose logs -f        → follow logs from all services
+#   docker compose logs -f backend → follow backend logs only
+#   docker compose down           → stop and remove containers
+#   docker compose down -v        → stop AND delete volumes (wipes data)
+#   docker compose ps             → show running containers and ports
+# ==============================================================================
+
+name: enterprise-ai-knowledge-platform
+
+services:
+
+  # ============================================================================
+  # PostgreSQL — Relational Database
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    # alpine = minimal Linux image. Smaller than full Debian. Production-ready.
+    container_name: eaikp_postgres
+    restart: unless-stopped
+    # unless-stopped: container restarts automatically unless manually stopped.
+    # Handles OS reboots and container crashes in production.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eaikp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eaikp_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-eaikp_db}
+      # POSTGRES_INITDB_ARGS: Passed to initdb at first startup
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Named volume: persists data across container restarts and rebuilds
+      # Without this, ALL data is lost when the container is removed
+      - postgres_data:/var/lib/postgresql/data
+      # Init script: runs ONCE on first container creation (enables extensions)
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      # host:container — expose PostgreSQL to host machine for DB GUI tools
+      # (e.g., DBeaver, TablePlus, pgAdmin)
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - backend_net
+    healthcheck:
+      # pg_isready: PostgreSQL built-in health check tool
+      # Returns exit code 0 when DB is ready to accept connections
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eaikp_user} -d ${POSTGRES_DB:-eaikp_db}"]
+      interval: 10s     # Check every 10 seconds
+      timeout: 5s       # Fail if check takes longer than 5 seconds
+      retries: 5        # Mark unhealthy after 5 consecutive failures
+      start_period: 30s # Wait 30 seconds before starting health checks (DB startup time)
+
+  # ============================================================================
+  # Redis — In-Memory Cache & Message Broker
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: eaikp_redis
+    restart: unless-stopped
+    # requirepass: Require password for all connections
+    # appendonly yes: Enable AOF persistence (data survives restart)
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_pass} --appendonly yes
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_pass}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - backend_net
+    healthcheck:
+      # redis-cli ping returns PONG when Redis is ready
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================================
+  # Qdrant — Vector Database
+  # ============================================================================
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    # Pinned version — not 'latest'. Avoids unexpected breaking changes.
+    container_name: eaikp_qdrant
+    restart: unless-stopped
+    volumes:
+      # Persistent vector storage — re-embedding all documents is expensive
+      # NEVER lose this volume without a re-indexing plan
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"       # HTTP API
+      - "${QDRANT_GRPC_PORT:-6334}:6334"  # gRPC API (faster for batch operations)
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ============================================================================
+  # FastAPI Backend
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eaikp_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+      # env_file loads all variables from .env into the container environment
+      # This is how DATABASE_URL, SECRET_KEY, etc. reach the application
+    environment:
+      # Override specific variables for Docker networking
+      # Inside Docker, services communicate via service NAME (not localhost)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eaikp_user}:${POSTGRES_PASSWORD:-eaikp_pass}@postgres:5432/${POSTGRES_DB:-eaikp_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
+      QDRANT_HOST: qdrant
+    volumes:
+      # Persist uploaded documents
+      - uploads_data:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - backend_net
+    depends_on:
+      # depends_on with condition: service_healthy waits until health checks pass
+      # Without this, backend starts before PostgreSQL is ready → connection errors
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# ==============================================================================
+# Named Volumes
+#
+# Named volumes are managed by Docker — they persist independently of containers.
+# Even if you remove all containers with `docker compose down`, volumes survive.
+# Only `docker compose down -v` removes them (use with extreme caution!).
+# ==============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# ==============================================================================
+# Networks
+#
+# backend_net: Internal network for service-to-service communication.
+# Services on this network can reach each other by service name.
+# Services NOT on this network cannot reach the database (security).
+#
+# In the future, a frontend_net would be added for Nginx → Frontend routing.
+# ==============================================================================
+networks:
+  backend_net:
+    driver: bridge
+    # bridge: Default Docker network driver.
+    # Creates an isolated virtual network on the Docker host.
+    # Services communicate via their container name as hostname.
