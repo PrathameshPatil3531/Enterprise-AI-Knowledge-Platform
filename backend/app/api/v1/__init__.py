@@ -40,15 +40,19 @@ router.include_router(
 )
 
 # ---------------------------------------------------------------------------
-# Future milestones (uncomment as implemented):
+# Milestone 3 — Multi-Tenant Organizations
 # ---------------------------------------------------------------------------
-# from app.api.v1 import organizations, documents, chat, admin
+from app.api.v1 import organizations
+
+router.include_router(
+    organizations.router,
+    prefix="/organizations",
+    tags=["Organizations"],
+)
+
+# Future milestones (uncomment as implemented):
+# from app.api.v1 import documents, chat, admin
 #
-# router.include_router(
-#     organizations.router,
-#     prefix="/organizations",
-#     tags=["Organizations"],
-# )
 # router.include_router(
 #     documents.router,
 #     prefix="/documents",

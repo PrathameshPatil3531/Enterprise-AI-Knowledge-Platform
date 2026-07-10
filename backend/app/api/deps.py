@@ -23,7 +23,7 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import UnauthorizedException
+from app.core.exceptions import UnauthorizedException, BadRequestException
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.user import User
@@ -111,36 +111,73 @@ def get_current_user(
 
 
 # ---------------------------------------------------------------------------
-# Future Dependencies (scaffolded for Milestone 3+)
+# Organization & RBAC Dependencies (Milestone 3)
 # ---------------------------------------------------------------------------
 
-# def get_current_org(
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db),
-# ) -> tuple[User, "Organization", str]:
-#     """
-#     Extend get_current_user with organization context.
-#     Returns (user, organization, role) tuple.
-#     """
-#     ...
+from fastapi import Header, Path
+from app.models.membership import Membership, Role
+from app.models.organization import Organization
+from app.repositories.membership_repository import membership_repository
+from app.repositories.organization_repository import organization_repository
+from app.core.exceptions import ForbiddenException, NotFoundException
 
-# def require_role(minimum_role: str):
-#     """
-#     Factory dependency that enforces role-based access control.
-#
-#     Usage:
-#         @router.delete("/{id}", dependencies=[Depends(require_role("admin"))])
-#         def delete_resource(...):
-#             ...
-#     """
-#     role_hierarchy = {"viewer": 0, "member": 1, "admin": 2, "owner": 3}
-#
-#     def dependency(
-#         user_org_role: tuple = Depends(get_current_org),
-#     ):
-#         _, _, role = user_org_role
-#         if role_hierarchy.get(role, -1) < role_hierarchy.get(minimum_role, 999):
-#             raise ForbiddenException(f"Requires role '{minimum_role}' or higher")
-#         return user_org_role
-#
-#     return dependency
+__all__ = [
+    "get_db",
+    "get_current_user",
+    "get_current_org_membership",
+    "require_owner",
+    "require_admin",
+    "require_member",
+]
+
+def get_current_org_membership(
+    organization_id: uuid.UUID = Header(None, alias="X-Organization-Id"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Membership:
+    """
+    Dependency that extracts the organization ID from the X-Organization-Id header
+    and retrieves the user's membership for that organization.
+    """
+    if not organization_id:
+        raise BadRequestException("Missing X-Organization-Id header")
+
+    org = organization_repository.get_by_id(db, org_id=organization_id)
+    if not org:
+        raise NotFoundException("Organization not found")
+
+    membership = membership_repository.get_by_user_and_org(
+        db, user_id=current_user.id, org_id=organization_id
+    )
+    if not membership:
+        raise ForbiddenException("You are not a member of this organization")
+
+    return membership
+
+
+def require_role(minimum_role: Role):
+    """
+    Factory dependency that enforces role-based access control.
+    """
+    role_hierarchy = {
+        Role.VIEWER: 0,
+        Role.MEMBER: 1,
+        Role.ADMIN: 2,
+        Role.OWNER: 3,
+    }
+
+    def dependency(
+        membership: Membership = Depends(get_current_org_membership),
+    ) -> Membership:
+        if role_hierarchy.get(membership.role, -1) < role_hierarchy.get(minimum_role, 999):
+            raise ForbiddenException(f"Requires role '{minimum_role.value}' or higher")
+        return membership
+
+    return dependency
+
+
+# Reusable dependency aliases
+require_owner = require_role(Role.OWNER)
+require_admin = require_role(Role.ADMIN)
+require_member = require_role(Role.MEMBER)
+
