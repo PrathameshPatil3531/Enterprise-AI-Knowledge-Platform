@@ -28,6 +28,7 @@ passlib[bcrypt]
 # --- Configuration ---
 pydantic-settings
 python-dotenv
+email-validator
 
 # --- Redis ---
 redis

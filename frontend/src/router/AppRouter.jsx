@@ -4,14 +4,19 @@
  * Defines all routes and their protection status.
  *
  * Route types:
- * - Public routes: Accessible without authentication (Login, Register)
+ * - Guest routes: Only accessible when NOT authenticated (Login, Register)
  * - Protected routes: Require valid JWT (Dashboard, Documents, Chat)
  *
- * Currently all routes render placeholder pages (Milestone 1 scope).
- * Authentication and protected route guards are added in Milestone 2.
+ * Authentication and route protection are handled by:
+ * - ProtectedRoute: Redirects to /login if not authenticated
+ * - GuestRoute: Redirects to /dashboard if already authenticated
  */
 
 import { Routes, Route, Navigate } from 'react-router-dom'
+import ProtectedRoute from '../components/ProtectedRoute'
+import GuestRoute from '../components/GuestRoute'
+import LoginPage from '../pages/LoginPage'
+import RegisterPage from '../pages/RegisterPage'
 
 // --- Placeholder pages (replaced with real implementations in future milestones) ---
 const Placeholder = ({ title }) => (
@@ -22,7 +27,7 @@ const Placeholder = ({ title }) => (
       <p className="text-slate-400 text-sm">
         Enterprise AI Knowledge Platform
       </p>
-      <p className="text-slate-500 text-xs mt-2">Milestone 1 — Infrastructure Ready</p>
+      <p className="text-slate-500 text-xs mt-2">Coming in a future milestone</p>
     </div>
   </div>
 )
@@ -30,15 +35,27 @@ const Placeholder = ({ title }) => (
 function AppRouter() {
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/login"    element={<Placeholder title="Login" />} />
-      <Route path="/register" element={<Placeholder title="Register" />} />
+      {/* Guest routes — only accessible when NOT logged in */}
+      <Route path="/login" element={
+        <GuestRoute><LoginPage /></GuestRoute>
+      } />
+      <Route path="/register" element={
+        <GuestRoute><RegisterPage /></GuestRoute>
+      } />
 
-      {/* Protected routes (auth guard added in Milestone 2) */}
-      <Route path="/dashboard" element={<Placeholder title="Dashboard" />} />
-      <Route path="/documents" element={<Placeholder title="Documents" />} />
-      <Route path="/chat"      element={<Placeholder title="Chat" />} />
-      <Route path="/chat/:id"  element={<Placeholder title="Chat Session" />} />
+      {/* Protected routes — require authentication */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute><Placeholder title="Dashboard" /></ProtectedRoute>
+      } />
+      <Route path="/documents" element={
+        <ProtectedRoute><Placeholder title="Documents" /></ProtectedRoute>
+      } />
+      <Route path="/chat" element={
+        <ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>
+      } />
+      <Route path="/chat/:id" element={
+        <ProtectedRoute><Placeholder title="Chat Session" /></ProtectedRoute>
+      } />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

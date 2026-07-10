@@ -19,6 +19,7 @@ passlib[bcrypt]==1.7.4            # Password hashing
 # --- Configuration ---
 pydantic-settings==2.6.1          # Environment-based config via Pydantic
 python-dotenv==1.0.1              # Load .env files
+email-validator==2.2.0            # Required by Pydantic EmailStr type
 
 # --- Redis ---
 redis==5.2.0                      # Cache, sessions, rate limiting
